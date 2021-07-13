@@ -17,13 +17,7 @@ import javax.inject.Inject
 class RemoteDataSource @Inject constructor(private val mainApi: MainApi){
 
     //Download video on back thread using retrofit2
-    fun downloadFile(url: String): Single<Response<ResponseBody>> {
+    suspend fun downloadFile(url: String): Response<ResponseBody> {
         return mainApi.downloadVideo(url)
-            .onErrorReturn {
-                Log.d(TAG, "$it")
-                return@onErrorReturn null
-            }
-            .subscribeOn(Schedulers.io())
-            .observeOn(AndroidSchedulers.mainThread())
     }
 }

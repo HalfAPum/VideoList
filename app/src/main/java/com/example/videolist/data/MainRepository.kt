@@ -13,6 +13,10 @@ import io.reactivex.SingleObserver
 import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.disposables.Disposable
 import io.reactivex.schedulers.Schedulers
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.withContext
 import okhttp3.Response
 import okhttp3.ResponseBody
 import retrofit2.Call
@@ -32,14 +36,18 @@ class MainRepository @Inject constructor(
     Check that all videos are in db
     download if not
     */
-    fun loadVideos(videos: List<Video>, path: File) {
-        for (video in videos) {
-            getVideo(video, path)
+    suspend fun loadVideos(videos: List<Video>, path: File) {
+        withContext(Dispatchers.IO) {
+            for (video in videos) {
+
+                    getVideo(video, path)
+
+            }
         }
     }
 
     //return all videos
-    fun getVideos() : Observable<List<Video>> {
+    fun getVideos() : Flow<List<Video>> {
         return localDataSource.getVideos()
     }
 
@@ -47,30 +55,11 @@ class MainRepository @Inject constructor(
     getVideo checks for video in db
     if it's doesn't exit then download it
     */
-    private fun getVideo(element: Video, path: File) {
-        localDataSource.getVideo(element)
-            .subscribeOn(Schedulers.io())
-            .observeOn(AndroidSchedulers.mainThread())
-            .subscribe(object : MaybeObserver<Video?> {
-                lateinit var disposable: Disposable
-                override fun onSubscribe(d: Disposable) {
-                    disposable = d
-                }
-
-                override fun onSuccess(t: Video) {
-                    disposable.dispose()
-                }
-
-                override fun onError(e: Throwable) {
-                    Log.d(TAG, "$e")
-                }
-
-                override fun onComplete() {
-                    downloadVideoFile(path, element)
-                    disposable.dispose()
-                }
-
-            })
+    private suspend fun getVideo(element: Video, path: File) {
+        val video = localDataSource.getVideo(element)
+        if (video == null) {
+            downloadVideoFile(path, element)
+        }
     }
 
 
@@ -78,58 +67,22 @@ class MainRepository @Inject constructor(
     download video from network
     if video is valid then download image for this video
      */
-    private fun downloadVideoFile(path: File, element: Video) {
-        remoteDataSource.downloadFile(element.video_path!!)
-            .subscribe(object : SingleObserver<retrofit2.Response<ResponseBody>>{
-            lateinit var disposable: Disposable
-            override fun onSubscribe(d: Disposable) {
-                disposable = d
-            }
-
-            override fun onSuccess(response: retrofit2.Response<ResponseBody>) {
-                val responseBody = response.body()
-                if(responseBody != null) {
-                    downloadImageFile(responseBody, path, element)
-                    Log.d(TAG, "downloaded and startingimega$element")
-                    disposable.dispose()
-                }
-            }
-
-            override fun onError(e: Throwable) {
-                Log.d(TAG, e.toString())
-                errorMessages.postValue("Check internet connection and try again")
-                disposable.dispose()
-            }
-
-        })
+    private suspend fun downloadVideoFile(path: File, element: Video) {
+        val result = remoteDataSource.downloadFile(element.video_path!!).body()
+        if(result != null) {
+            downloadImageFile(result, path, element)
+        }
     }
 
     /*
     download image from network
     if image is valid then save downloaded data
      */
-    private fun downloadImageFile(videoFile: ResponseBody, path: File, element: Video) {
-        remoteDataSource.downloadFile(element.image_path!!)
-            .subscribe(object : SingleObserver<retrofit2.Response<ResponseBody>>{
-                lateinit var disposable: Disposable
-                override fun onSubscribe(d: Disposable) {
-                    disposable = d
-                }
-
-                override fun onSuccess(response: retrofit2.Response<ResponseBody>) {
-                    val responseBody = response.body()
-                    if(responseBody != null) {
-                        localDataSource.saveVideo(responseBody, videoFile, path, element)
-                        disposable.dispose()
-                    }
-                }
-
-                override fun onError(e: Throwable) {
-                    Log.d(TAG, e.toString())
-                    errorMessages.postValue("Check internet connection and try again")
-                    disposable.dispose()
-                }
-
-            })
+    private suspend fun downloadImageFile(videoFile: ResponseBody, path: File, element: Video) {
+        val result = remoteDataSource.downloadFile(element.image_path!!).body()
+        if(result != null) {
+            localDataSource.saveVideo(result, videoFile, path, element)
+        }
     }
 }
+

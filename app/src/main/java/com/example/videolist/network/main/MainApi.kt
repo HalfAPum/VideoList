@@ -13,6 +13,6 @@ import retrofit2.http.Streaming
 interface MainApi {
 
     @GET("{url}")
-    fun downloadVideo(@Path("url") url: String) : Single<Response<ResponseBody>>
+    suspend fun downloadVideo(@Path("url") url: String) : Response<ResponseBody>
 
 }

@@ -4,7 +4,10 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import com.example.videolist.R
 import com.example.videolist.ViewModelProviderFactory
 import com.example.videolist.adapters.DescriptionAdapter
@@ -15,6 +18,8 @@ import com.google.android.exoplayer2.SimpleExoPlayer
 import com.google.android.exoplayer2.ui.PlayerNotificationManager
 import com.google.android.exoplayer2.util.Util
 import dagger.android.support.DaggerFragment
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 import kotlin.properties.Delegates
 
@@ -74,13 +79,15 @@ class VideoFragment : DaggerFragment() {
     }
 
     private fun subscribeObservers() {
-        //Observe playbackPosition
-        viewModel.playbackPosition.observe(viewLifecycleOwner) {
-            playbackPosition = it
-        }
-        //Observe current video
-        viewModel.videoId.observe(viewLifecycleOwner) {
-            videoId = it
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.playbackPosition.collect {
+                    playbackPosition = it
+                }
+                viewModel.videoId.collect {
+                    videoId = it
+                }
+            }
         }
         //Observe videosList
         viewModel.videos.observe(viewLifecycleOwner) {

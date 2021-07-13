@@ -6,15 +6,16 @@ import androidx.room.Query
 import com.example.videolist.models.Video
 import io.reactivex.Maybe
 import io.reactivex.Observable
+import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface VideoDao {
 
     @Query("SELECT * FROM video")
-    fun getAllVideos(): Observable<List<Video>>
+    fun getAllVideos(): Flow<List<Video>>
 
     @Query("SELECT * FROM video WHERE video_name = :name")
-    fun getVideo(name: String): Maybe<Video>
+    fun getVideo(name: String): Video?
 
     @Insert
     fun insert(video: Video)

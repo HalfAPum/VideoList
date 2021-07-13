@@ -29,7 +29,7 @@ class MainModule {
         fun provideRoomInstance(mainActivity: MainActivity) : AppDatabase{
             return Room.databaseBuilder(
                 mainActivity,
-                AppDatabase::class.java, "VideosDB32"
+                AppDatabase::class.java, "VideosDB36"
             )
                 .build()
         }
